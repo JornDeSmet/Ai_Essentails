@@ -7,7 +7,7 @@ from pydantic import BaseModel
 app = FastAPI()
 
 model = joblib.load("mushroom_model.pkl")
-encoders = joblib.load("encoders.pkl")
+encoders = joblib.load("label_encoders.pkl")
 feature_order = joblib.load("feature_order.pkl")  # <== Add this!
 
 expected_features = list(encoders.keys())
