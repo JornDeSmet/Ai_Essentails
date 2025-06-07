@@ -4,7 +4,7 @@ This repository contains a machine learning-powered web API to classify mushroom
 
 ## 🚀 Live Demo
 
-You can try out the deployed version here:  
+You can try out the deployed version here for this you do need to use postman and see how to use to give the correct json message:  
 📍 **[Live API on Render](https://ai-essentails.onrender.com/predict)**
 
 ---
