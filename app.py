@@ -1,3 +1,4 @@
+# app.py
 from fastapi import FastAPI
 from pydantic import BaseModel
 import joblib
@@ -8,33 +9,46 @@ import pandas as pd
 model = joblib.load("mushroom_model.pkl")
 label_encoders = joblib.load("label_encoders.pkl")
 
-# Initialize app
+# Define expected features (in correct order)
+expected_features = [
+    'cap-diameter','cap-shape','cap-surface','cap-color','does-bruise-or-bleed',
+    'gill-attachment','gill-spacing','gill-color','stem-height','stem-width',
+    'stem-root','stem-surface','stem-color','veil-type','veil-color',
+    'has-ring','ring-type','spore-print-color','habitat','season'
+]
+
+# FastAPI app
 app = FastAPI()
 
-# Define the expected input format
+# Input schema
 class MushroomInput(BaseModel):
-    features: dict  # expects a dictionary of raw feature names and string values
+    features: dict
 
 @app.get("/")
-def read_root():
-    return {"message": "Mushroom classifier is live!"}
+def home():
+    return {"message": "Mushroom classification API is live."}
 
 @app.post("/predict")
-def predict(data: MushroomInput):
-    input_dict = data.features
+def predict(input: MushroomInput):
+    raw = input.features
 
-    # Create a DataFrame from the input
-    df = pd.DataFrame([input_dict])
+    # Check for missing fields
+    missing = [f for f in expected_features if f not in raw]
+    if missing:
+        return {"error": f"Missing fields: {missing}"}
 
-    # Apply LabelEncoders
+    # Create DataFrame
+    df = pd.DataFrame([raw])
+
+    # Apply encoders to categorical columns
     for col in df.columns:
         if col in label_encoders:
-            df[col] = label_encoders[col].transform(df[col])
-        else:
-            return {"error": f"Unexpected feature: {col}"}
+            le = label_encoders[col]
+            if df[col][0] not in le.classes_:
+                return {"error": f"Unexpected value for '{col}': {df[col][0]}"}
+            df[col] = le.transform(df[col])
 
     # Predict
-    prediction = model.predict(df)
-    result = "edible" if prediction[0] == 1 else "poisonous"
-
-    return {"prediction": result}
+    prediction = model.predict(df)[0]
+    label = "edible" if prediction == 1 else "poisonous"
+    return {"prediction": label}
