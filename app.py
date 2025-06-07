@@ -1,54 +1,42 @@
-# app.py
 from fastapi import FastAPI
 from pydantic import BaseModel
-import joblib
-import numpy as np
 import pandas as pd
+import joblib
 
-# Load model and encoders
+# Load your trained model
 model = joblib.load("mushroom_model.pkl")
-label_encoders = joblib.load("label_encoders.pkl")
 
-# Define expected features (in correct order)
+# Define the expected features from training
 expected_features = [
-    'cap-diameter','cap-shape','cap-surface','cap-color','does-bruise-or-bleed',
-    'gill-attachment','gill-spacing','gill-color','stem-height','stem-width',
-    'stem-root','stem-surface','stem-color','veil-type','veil-color',
-    'has-ring','ring-type','spore-print-color','habitat','season'
+    "cap-diameter", "cap-shape", "cap-surface", "cap-color", "does-bruise-or-bleed",
+    "gill-attachment", "gill-spacing", "gill-color", "stem-height", "stem-width",
+    "stem-surface", "stem-color", "has-ring", "ring-type", "habitat", "season"
 ]
 
-# FastAPI app
-app = FastAPI()
-
-# Input schema
+# Define the input data schema
 class MushroomInput(BaseModel):
     features: dict
 
+app = FastAPI()
+
 @app.get("/")
-def home():
-    return {"message": "Mushroom classification API is live."}
+def read_root():
+    return {"message": "Mushroom classifier is live!"}
 
 @app.post("/predict")
-def predict(input: MushroomInput):
-    raw = input.features
+def predict(data: MushroomInput):
+    # Filter only the expected features (ignore any extras)
+    input_data = {key: data.features[key] for key in expected_features if key in data.features}
 
-    # Check for missing fields
-    missing = [f for f in expected_features if f not in raw]
-    if missing:
-        return {"error": f"Missing fields: {missing}"}
+    # Ensure all expected features are present
+    if set(input_data.keys()) != set(expected_features):
+        missing = list(set(expected_features) - set(input_data.keys()))
+        return {"error": f"Missing required features: {missing}"}
 
-    # Create DataFrame
-    df = pd.DataFrame([raw])
-
-    # Apply encoders to categorical columns
-    for col in df.columns:
-        if col in label_encoders:
-            le = label_encoders[col]
-            if df[col][0] not in le.classes_:
-                return {"error": f"Unexpected value for '{col}': {df[col][0]}"}
-            df[col] = le.transform(df[col])
+    # Convert to DataFrame for prediction
+    df = pd.DataFrame([input_data])
 
     # Predict
     prediction = model.predict(df)[0]
-    label = "edible" if prediction == 1 else "poisonous"
-    return {"prediction": label}
+    result = "edible" if prediction == 1 else "poisonous"
+    return {"prediction": result}
