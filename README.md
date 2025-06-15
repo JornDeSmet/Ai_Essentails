@@ -23,7 +23,7 @@ This project leverages a **Random Forest** classifier trained on a labeled mushr
 
 ---
 
-## 📦 How to Use
+## 📦 If you want to test or deploy it yourself
 
 ### 1. Clone the repository
 
